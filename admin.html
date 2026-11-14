@@ -6,13 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sabji Hub Admin</title>
 <style>
-body{font-family:Arial;background:#f1f8f2;margin:0;padding:20px}
-.box{max-width:400px;margin:60px auto;background:white;padding:25px;border-radius:15px;box-shadow:0 2px 12px #ccc}
+body{font-family:Arial;background:#eff8f0;margin:0;padding:20px}
+.box{max-width:400px;margin:60px auto;background:white;padding:25px;border-radius:16px;box-shadow:0 2px 12px #ccc}
 h2{text-align:center;color:#16833b}
-input,button{width:100%;padding:13px;margin-top:12px;box-sizing:border-box;border-radius:8px}
+input,button{width:100%;padding:14px;margin-top:14px;box-sizing:border-box;border-radius:8px;font-size:16px}
 input{border:1px solid #bbb}
-button{background:#16833b;color:white;border:0;font-size:16px}
-#message{text-align:center;color:#c00}
+button{background:#16833b;color:white;border:0}
+#message{text-align:center;color:#c00;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -27,36 +27,40 @@ button{background:#16833b;color:white;border:0;font-size:16px}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
-apiKey: "AIzaSyAqF827n4_hn-b4-4pOLxgKqK39l7OMTt84",
-authDomain: "sabji-hub.firebaseapp.com",
-projectId: "sabji-hub",
-storageBucket: "sabji-hub.firebasestorage.app",
-messagingSenderId: "241093629232",
-appId: "1:241093629232:web:c3a4defd6d01ab201024f5"
+  apiKey: "AIzaSyAqF827n4_hn-b4-4pOLxgKqK39l7OMTt84",
+  authDomain: "sabji-hub.firebaseapp.com",
+  projectId: "sabji-hub",
+  storageBucket: "sabji-hub.firebasestorage.app",
+  messagingSenderId: "241093629232",
+  appId: "1:241093629232:web:c3a4defd6d01ab201024f5"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 document.getElementById("login").addEventListener("click", async () => {
-const email = document.getElementById("email").value.trim();
-const password = document.getElementById("password").value;
-const message = document.getElementById("message");
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const message = document.getElementById("message");
 
-try {
-const result = await signInWithEmailAndPassword(auth, email, password);
-if (result.user.uid !== "GOi2IHhAM1NyaJoCPkY76wKA2JE2") {
-await auth.signOut();
-message.textContent = "Admin access nahi mila.";
-return;
-}
-message.textContent = "Login successful!";
-} catch (error) {
-  message.textContent = error.code + ": " + error.message;
-}
+  message.textContent = "Login ho raha hai...";
+
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+
+    if (result.user.uid !== "GOi2IHhAM1NyaJoCPkY76wKA2JE2") {
+      await signOut(auth);
+      message.textContent = "Admin account nahi hai.";
+      return;
+    }
+
+    message.textContent = "Admin login successful!";
+  } catch (error) {
+    message.textContent = error.code + ": " + error.message;
+  }
 });
 </script>
 </body>
