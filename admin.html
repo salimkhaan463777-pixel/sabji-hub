@@ -55,7 +55,7 @@ return;
 }
 message.textContent = "Login successful!";
 } catch (error) {
-message.textContent = "Login nahi hua. Email aur password check karein.";
+  message.textContent = error.code + ": " + error.message;
 }
 });
 </script>
