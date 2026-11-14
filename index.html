@@ -1,0 +1,165 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sabji Hub - Fresh Vegetables</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f8f2;
+      color: #222;
+    }
+    header {
+      background: #16833b;
+      color: white;
+      padding: 22px 16px;
+      text-align: center;
+    }
+    header h1 { margin: 0; font-size: 28px; }
+    header p { margin: 7px 0 0; }
+    main { max-width: 850px; margin: auto; padding: 18px; }
+    .intro {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    .intro h2 { margin: 0 0 6px; color: #16833b; }
+    #status { color: #555; font-size: 14px; }
+    #products {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 12px;
+    }
+    .product {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 2px 8px #00000012;
+    }
+    .product h3 { margin: 0 0 10px; font-size: 18px; }
+    .price { color: #16833b; font-size: 19px; font-weight: bold; }
+    .stock { color: #666; font-size: 13px; margin-top: 7px; }
+    .unavailable { color: #c0392b; }
+    button {
+      border: 0;
+      background: #16833b;
+      color: white;
+      padding: 11px 17px;
+      border-radius: 8px;
+      font-size: 15px;
+      margin-top: 12px;
+    }
+    button:disabled { background: #aaa; }
+    .bottom {
+      text-align: center;
+      color: #666;
+      font-size: 13px;
+      padding: 25px 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🥬 Sabji Hub</h1>
+    <p>Taazi Sabzi, Aapke Ghar Tak!</p>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h2>Aaj ki sabziyan</h2>
+      <p>Fresh vegetables ghar baithe mangwayein.</p>
+      <div id="status">Sabziyon ki list load ho rahi hai...</div>
+      <button id="refresh">Refresh</button>
+    </section>
+
+    <section id="products"></section>
+  </main>
+
+  <div class="bottom">Sabji Hub · Ahmedabad</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAqF827n4_hn-b4-4pOLxgKqK39l7OMTt84",
+      authDomain: "sabji-hub.firebaseapp.com",
+      projectId: "sabji-hub",
+      storageBucket: "sabji-hub.firebasestorage.app",
+      messagingSenderId: "241093629232",
+      appId: "1:241093629232:web:c3a4defd6d01ab201024f5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const productsBox = document.getElementById("products");
+    const statusBox = document.getElementById("status");
+
+    async function loadVegetables() {
+      statusBox.textContent = "Sabziyon ki list load ho rahi hai...";
+      productsBox.replaceChildren();
+
+      try {
+        const snapshot = await getDocs(collection(db, "vegetables"));
+
+        if (snapshot.empty) {
+          statusBox.textContent = "Abhi koi sabzi add nahi hui hai.";
+          return;
+        }
+
+        snapshot.forEach((item) => {
+          const veg = item.data();
+          const name = veg.name || item.id;
+          const price = Number(veg.price || 0);
+          const stock = Number(veg.stock || 0);
+          const unit = veg.unit || "Kg";
+          const isAvailable = stock > 0 && veg.available !== false;
+
+          const card = document.createElement("article");
+          card.className = "product";
+
+          const title = document.createElement("h3");
+          title.textContent = name;
+
+          const priceText = document.createElement("div");
+          priceText.className = "price";
+          priceText.textContent = "₹" + price + " / " + unit;
+
+          const stockText = document.createElement("div");
+          stockText.className = "stock";
+          stockText.textContent = isAvailable
+            ? "Stock: " + stock + " " + unit
+            : "Filhaal stock available nahi hai";
+          if (!isAvailable) stockText.classList.add("unavailable");
+
+          const addButton = document.createElement("button");
+          addButton.textContent = isAvailable ? "Available" : "Out of stock";
+          addButton.disabled = !isAvailable;
+
+          card.append(title, priceText, stockText, addButton);
+          productsBox.appendChild(card);
+        });
+
+        statusBox.textContent = snapshot.size + " sabziyan mil gayi hain.";
+      } catch (error) {
+        console.error(error);
+        statusBox.textContent =
+          "List load nahi hui. Firebase Rules aur internet connection check karein.";
+      }
+    }
+
+    document.getElementById("refresh").addEventListener("click", loadVegetables);
+    loadVegetables();
+  </script>
+</body>
+</html>
