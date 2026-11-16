@@ -1,0 +1,287 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sabji Hub</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f4f8f2;color:#222}
+header{background:#16833b;color:white;text-align:center;padding:22px 12px}
+header h1{margin:0;font-size:28px}
+main{max-width:850px;margin:auto;padding:15px}
+.section,.product{background:white;padding:16px;border-radius:12px;margin-bottom:15px;box-shadow:0 2px 8px #00000010}
+h2{color:#16833b;margin-top:0}
+#products{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px}
+.product h3{margin:0 0 9px}
+.price{color:#16833b;font-weight:bold;font-size:18px}
+.stock{font-size:13px;color:#666;margin-top:7px}
+.unavailable{color:#c0392b}
+.quantity{display:flex;align-items:center;gap:12px;margin-top:12px}
+button{border:0;background:#16833b;color:white;padding:10px 14px;border-radius:8px;font-size:15px}
+button:disabled{background:#aaa}
+input,textarea,select{width:100%;padding:12px;margin:7px 0 14px;border:1px solid #ccc;border-radius:8px;font-size:16px}
+label{font-weight:bold;font-size:14px}
+.cart-row,.total-row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #eee}
+.grand{font-size:20px;font-weight:bold;color:#16833b}
+.note{font-size:13px;color:#666}
+.full{width:100%;padding:13px;font-size:17px}
+.bottom{text-align:center;color:#666;padding:20px;font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+<h1>🥬 Sabji Hub</h1>
+<p>Taazi Sabzi, Aapke Ghar Tak!</p>
+</header>
+
+<main>
+
+<section class="section">
+<h2>Aaj ki sabziyan</h2>
+<div id="status">Sabziyan load ho rahi hain...</div>
+<button id="refresh">Refresh</button>
+</section>
+
+<section id="products"></section>
+
+<section class="section">
+<h2>🛒 Aapka Cart</h2>
+<div id="cartItems">Abhi cart khaali hai.</div>
+<div class="total-row"><span>Sabziyon ka total</span><strong id="subtotal">₹0</strong></div>
+<div class="total-row"><span>Delivery charge</span><strong id="delivery">₹0</strong></div>
+<div class="total-row grand"><span>Grand Total</span><span id="grandTotal">₹0</span></div>
+<p class="note">₹100 tak ke order par ₹20 delivery. ₹100 se zyada par free delivery.</p>
+</section>
+
+<section class="section">
+<h2>📋 Customer Details</h2>
+
+<form id="customerForm">
+
+<label for="customerName">Aapka naam</label>
+<input id="customerName" type="text" placeholder="Apna poora naam likhein" required>
+
+<label for="mobile">Mobile number</label>
+<input id="mobile" type="tel" inputmode="numeric" maxlength="10" pattern="[6-9][0-9]{9}" placeholder="10 digit mobile number" required>
+
+<label for="area">Apna delivery area chunein</label>
+<select id="area" required>
+<option value="">-- Apna area select karein --</option>
+
+<option>Amba Tower</option>
+<option>RCC Road</option>
+<option>Aqsa Masjid</option>
+<option>Aqsa Flat (Main Shop)</option>
+
+<option>Canal</option>
+<option>Muskan Hospital</option>
+<option>Ibrahim Masjid</option>
+<option>Sama School</option>
+
+<option>Meter Wali Gali (Canal)</option>
+<option>Al Khyber Society</option>
+<option>Madani Duplex</option>
+<option>Bismillah Bakery</option>
+<option>Ashrafi Masjid</option>
+
+<option>Kaswa Park</option>
+<option>AVN Nagar</option>
+
+</select>
+
+<label for="address">Poora ghar ka address</label>
+<textarea id="address" rows="3" placeholder="Ghar number, society, area, city" required></textarea>
+
+<label for="landmark">Paas ka landmark</label>
+<input id="landmark" type="text" placeholder="Jaise school, masjid, tower">
+
+<label for="payment">Payment option</label>
+<select id="payment" required>
+<option value="COD">Cash on Delivery (COD)</option>
+<option value="UPI">UPI (abhi shuru nahi hua)</option>
+</select>
+
+<button class="full" type="submit">Place Order</button>
+
+</form>
+
+<p class="note">Order submission abhi security setup ke liye band hai. Filhaal order save nahi hoga.</p>
+</section>
+
+</main>
+
+<div class="bottom">Sabji Hub · Ahmedabad</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
+import {getFirestore,collection,getDocs} from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
+
+const firebaseConfig={
+apiKey:"AIzaSyAqF827n4_hn-b4-4pOLxgKqK39l7OMTt84",
+authDomain:"sabji-hub.firebaseapp.com",
+projectId:"sabji-hub",
+storageBucket:"sabji-hub.firebasestorage.app",
+messagingSenderId:"241093629232",
+appId:"1:241093629232:web:c3a4defd6d01ab201024f5"
+};
+
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+
+const vegetables=[];
+const cart={};
+const productsBox=document.getElementById("products");
+const statusBox=document.getElementById("status");
+
+function updateCart(){
+const box=document.getElementById("cartItems");
+box.replaceChildren();
+
+let subtotal=0;
+let count=0;
+
+vegetables.forEach(veg=>{
+const qty=cart[veg.id]||0;
+if(qty<=0)return;
+
+subtotal+=qty*veg.price;
+count++;
+
+const row=document.createElement("div");
+row.className="cart-row";
+
+const name=document.createElement("span");
+name.textContent=veg.name+" × "+qty+" "+veg.unit;
+
+const amount=document.createElement("strong");
+amount.textContent="₹"+(qty*veg.price);
+
+row.append(name,amount);
+box.appendChild(row);
+});
+
+if(count===0)box.textContent="Abhi cart khaali hai.";
+
+const charge=subtotal===0?0:(subtotal<=100?20:0);
+
+document.getElementById("subtotal").textContent="₹"+subtotal;
+document.getElementById("delivery").textContent="₹"+charge;
+document.getElementById("grandTotal").textContent="₹"+(subtotal+charge);
+}
+
+function showVegetables(){
+productsBox.replaceChildren();
+
+vegetables.forEach(veg=>{
+const card=document.createElement("article");
+card.className="product";
+
+const title=document.createElement("h3");
+title.textContent=veg.name;
+
+const price=document.createElement("div");
+price.className="price";
+price.textContent="₹"+veg.price+" / "+veg.unit;
+
+const stock=document.createElement("div");
+stock.className="stock";
+stock.textContent=veg.stock>0?"Stock: "+veg.stock+" "+veg.unit:"Filhaal stock available nahi hai";
+
+if(veg.stock<=0)stock.classList.add("unavailable");
+
+const controls=document.createElement("div");
+controls.className="quantity";
+
+const minus=document.createElement("button");
+minus.textContent="−";
+minus.disabled=veg.stock<=0||(cart[veg.id]||0)<=0;
+
+const number=document.createElement("span");
+number.textContent=cart[veg.id]||0;
+
+const plus=document.createElement("button");
+plus.textContent="+";
+plus.disabled=veg.stock<=0||(cart[veg.id]||0)>=veg.stock;
+
+minus.onclick=()=>{
+cart[veg.id]=Math.max(0,(cart[veg.id]||0)-1);
+showVegetables();
+updateCart();
+};
+
+plus.onclick=()=>{
+if((cart[veg.id]||0)<veg.stock){
+cart[veg.id]=(cart[veg.id]||0)+1;
+showVegetables();
+updateCart();
+}
+};
+
+controls.append(minus,number,plus);
+card.append(title,price,stock,controls);
+productsBox.appendChild(card);
+});
+}
+
+async function loadVegetables(){
+statusBox.textContent="Sabziyan load ho rahi hain...";
+
+try{
+const snapshot=await getDocs(collection(db,"vegetables"));
+vegetables.length=0;
+
+snapshot.forEach(item=>{
+const data=item.data();
+
+let stock=Math.max(0,Number(data.stock||0));
+if(data.available===false)stock=0;
+
+vegetables.push({
+id:item.id,
+name:data.name||item.id,
+price:Number(data.price||0),
+stock,
+unit:data.unit||"Kg"
+});
+});
+
+showVegetables();
+updateCart();
+
+statusBox.textContent=snapshot.size+" sabziyan mil gayi hain.";
+
+}catch(error){
+console.error(error);
+statusBox.textContent="Sabziyan load nahi hui. Internet aur Firebase Rules check karein.";
+}
+}
+
+document.getElementById("refresh").addEventListener("click",loadVegetables);
+
+document.getElementById("customerForm").addEventListener("submit",event=>{
+event.preventDefault();
+
+if(Object.values(cart).every(qty=>qty===0)){
+alert("Pehle cart mein sabzi add karein.");
+return;
+}
+
+if(document.getElementById("payment").value==="UPI"){
+alert("UPI payment abhi shuru nahi hua. Filhaal COD option chunein.");
+return;
+}
+
+const area=document.getElementById("area").value;
+
+alert("Aapka selected delivery area: "+area+
+"\nCustomer form taiyar hai. Order abhi save nahi hua hai.");
+});
+
+loadVegetables();
+</script>
+
+</body>
+</html>
