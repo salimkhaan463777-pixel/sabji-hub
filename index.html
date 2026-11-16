@@ -28,6 +28,8 @@ label{font-weight:bold;font-size:14px}
 .note{font-size:13px;color:#666}
 .full{width:100%;padding:13px;font-size:17px}
 .bottom{text-align:center;color:#666;padding:20px;font-size:13px}
+.location-btn{width:100%;margin:5px 0 10px;padding:13px}
+#locationStatus{font-size:13px;color:#555;margin:5px 0 12px;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -70,27 +72,31 @@ label{font-weight:bold;font-size:14px}
 <label for="area">Apna delivery area chunein</label>
 <select id="area" required>
 <option value="">-- Apna area select karein --</option>
-
 <option>Amba Tower</option>
 <option>RCC Road</option>
 <option>Aqsa Masjid</option>
 <option>Aqsa Flat (Main Shop)</option>
-
 <option>Canal</option>
 <option>Muskan Hospital</option>
 <option>Ibrahim Masjid</option>
 <option>Sama School</option>
-
 <option>Meter Wali Gali (Canal)</option>
 <option>Al Khyber Society</option>
 <option>Madani Duplex</option>
 <option>Bismillah Bakery</option>
 <option>Ashrafi Masjid</option>
-
 <option>Kaswa Park</option>
 <option>AVN Nagar</option>
-
 </select>
+
+<button type="button" id="locationBtn" class="location-btn">
+📍 Use My Current Location
+</button>
+<div id="locationStatus" aria-live="polite">
+Location abhi select nahi hui hai.
+</div>
+<input type="hidden" id="latitude">
+<input type="hidden" id="longitude">
 
 <label for="address">Poora ghar ka address</label>
 <textarea id="address" rows="3" placeholder="Ghar number, society, area, city" required></textarea>
@@ -260,6 +266,72 @@ statusBox.textContent="Sabziyan load nahi hui. Internet aur Firebase Rules check
 }
 
 document.getElementById("refresh").addEventListener("click",loadVegetables);
+
+/* GPS LOCATION FEATURE */
+document.getElementById("locationBtn").addEventListener("click",()=>{
+const btn=document.getElementById("locationBtn");
+const message=document.getElementById("locationStatus");
+const latitude=document.getElementById("latitude");
+const longitude=document.getElementById("longitude");
+
+if(!window.isSecureContext){
+message.textContent="Location ke liye secure HTTPS website zaroori hai.";
+return;
+}
+
+if(!navigator.geolocation){
+message.textContent="Aapke phone/browser mein location support nahi hai.";
+return;
+}
+
+btn.disabled=true;
+message.textContent="Aapki location dhoondh rahe hain...";
+
+navigator.geolocation.getCurrentPosition(
+(position)=>{
+const lat=position.coords.latitude;
+const lng=position.coords.longitude;
+
+latitude.value=lat;
+longitude.value=lng;
+
+const mapUrl="https://www.google.com/maps?q="+lat+","+lng;
+
+message.replaceChildren();
+message.append("Location mil gayi! ");
+
+const link=document.createElement("a");
+link.href=mapUrl;
+link.target="_blank";
+link.rel="noopener";
+link.textContent="Google Maps par dekhein";
+message.appendChild(link);
+
+btn.disabled=false;
+},
+(error)=>{
+latitude.value="";
+longitude.value="";
+
+if(error.code===1){
+message.textContent="Location permission nahi mili. Phone settings mein location permission allow karein.";
+}else if(error.code===2){
+message.textContent="Location nahi mil rahi. Phone ka GPS on karke dobara try karein.";
+}else if(error.code===3){
+message.textContent="Location dhoondhne mein time lag raha hai. Dobara try karein.";
+}else{
+message.textContent="Location nahi mil saki. Dobara try karein.";
+}
+
+btn.disabled=false;
+},
+{
+enableHighAccuracy:true,
+timeout:20000,
+maximumAge:0
+}
+);
+});
 
 document.getElementById("customerForm").addEventListener("submit",event=>{
 event.preventDefault();
